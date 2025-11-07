@@ -1,0 +1,108 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "poppins", sans-serif;
+    background-color: rgb(176, 185, 193);
+    overflow-x: hidden;
+
+    --main: #eb7d24;
+}
+
+nav  {
+    background-color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 5%;
+    position: relative;
+}
+
+nav > ul {
+    display: flex;
+    list-style-type: none;
+    gap: 1rem;
+}
+
+nav > ul li {
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+nav > ul li:hover {
+    color: var(--main);
+    text-decoration: underline;
+}
+
+button {
+    padding: 5px 10px;
+    border-radius: 10px;
+    border: none;
+    background-color: var(--main);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+
+}
+
+button:hover {
+    opacity: 0.8;
+}
+
+.fa-bars {
+    font-size: 2rem;
+    transition: transform 0.3s;
+}
+
+.fa-bars.active {
+    transform: rotate(90deg);
+}
+
+.vertical-items {
+    position: absolute;
+    bottom: 0;
+    transform: translateY(100%) translateX(-100%);
+    background-color: white;
+    width: 100%;
+    left: 0;
+    padding: 1rem 7%;
+    border-top: 1px solid black;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    opacity: 0;
+    transition: all 0.3s;
+}
+
+
+.vertical-items p {
+    font-size: 2rem;
+}
+
+.vertical-items.active {
+    opacity: 1;
+    transform: translateY(100%) translateX(0);
+
+}
+
+@media screen and (min-width:769px) {
+    .fa-bars {
+        display: none;
+    }
+    .vertical-items {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    nav > ul {
+        display: none;
+    }
+
+    button {
+        display: none;
+    }
+}
