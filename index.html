@@ -1,1 +1,58 @@
-fuck you
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Animated Colorful Words</title>
+
+    <style>
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .word {
+            font-size: 70px;
+            font-weight: 900;
+            animation: glow 2.5s infinite linear, bounce 3s infinite ease-in-out;
+            background: linear-gradient(45deg, #ff00e0, #00eaff, #00ff5e, #ffcc00);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        @keyframes glow {
+            0% {
+                text-shadow: 0 0 10px #ff00e0, 0 0 20px #00eaff, 0 0 40px #00ff5e;
+            }
+            50% {
+                text-shadow: 0 0 20px #ff00e0, 0 0 40px #00eaff, 0 0 60px #ffcc00;
+            }
+            100% {
+                text-shadow: 0 0 10px #00eaff, 0 0 25px #00ff5e, 0 0 45px #ff00e0;
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="word">FUCK</div>
+        <div class="word">YOU</div>
+    </div>
+
+</body>
+</html>
