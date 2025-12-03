@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Africa Real-Time 4-Stage Audio</title>
+<title>Africa Real-Time Audio Fix</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
@@ -13,12 +13,8 @@
 
     /* CELESTIAL BODIES */
     .celestial-body { position:absolute; border-radius:50%; display:none; pointer-events: none; }
-
     .sun { width:80px; height:80px; background: radial-gradient(circle, #ffd700 20%, #ff8c00 100%); box-shadow: 0 0 40px #ff8c00; z-index:1; }
-    
-    .moon { width:60px; height:60px; background: radial-gradient(circle, #ddd 20%, #777 100%); box-shadow: 0 0 20px #fff; z-index:1; 
-            animation: spinMoon 20s linear infinite; }
-
+    .moon { width:60px; height:60px; background: radial-gradient(circle, #ddd 20%, #777 100%); box-shadow: 0 0 20px #fff; z-index:1; animation: spinMoon 20s linear infinite; }
     @keyframes spinMoon { 0%{transform: rotate(0deg);} 100%{transform: rotate(360deg);} }
 
     /* UI ELEMENTS */
@@ -50,17 +46,17 @@
 
     <div class="settings-btn" onclick="toggleMenu()"><i class="fas fa-cog"></i> Settings</div>
     <div class="settings-menu" id="settingsMenu">
-        <p id="toggleAudio"><i class="fas fa-volume-up"></i> Mute/Unmute</p>
+        <p id="toggleAudio"><i class="fas fa-volume-up"></i> Toggle Audio On/Off</p>
         <p onclick="forceMode(9)"><i class="fas fa-sun"></i> Test Morning (9 AM)</p>
         <p onclick="forceMode(14)"><i class="fas fa-cloud-sun"></i> Test Afternoon (2 PM)</p>
         <p onclick="forceMode(18)"><i class="fas fa-cloud-moon"></i> Test Evening (6 PM)</p>
         <p onclick="forceMode(22)"><i class="fas fa-moon"></i> Test Night (10 PM)</p>
-        <p onclick="forceMode('auto')"><i class="fas fa-clock"></i> Auto Mode</p>
+        <p onclick="forceMode('auto')"><i class="fas fa-clock"></i> Return to Auto Mode</p>
     </div>
 
     <div class="info-box">
         <h2 id="clockText">00:00:00</h2>
-        <h1 id="greetingText">Loading...</h1>
+        <h1 id="greetingText">Waiting...</h1>
         <h3 id="batteryText">Battery: --%</h3>
     </div>
 
@@ -75,115 +71,101 @@
 // --- CONFIGURATION ---
 let audioAllowed = false;
 let audioEnabled = true;
-let manualHour = null; // Used for testing specific times
+let manualHour = null; 
 
-// --- MAIN ENGINE ---
+// --- STATE MEMORY (Fixes the 1-second bug) ---
+// This remembers the name of the song playing so we don't restart it.
+let currentSongName = ""; 
+
 function updateSystem() {
     const now = new Date();
-    // Use manualHour if set (for testing), otherwise real time
     const hours = (manualHour !== null) ? manualHour : now.getHours();
     const minutes = now.getMinutes();
-    
-    // We calculate "Total Minutes" to animate smooth movement
-    // If manualHour is set, we assume minutes are 30 (half past)
-    const currentTotalMinutes = (manualHour !== null) ? (manualHour * 60) + 30 : (hours * 60) + minutes;
+    const totalMinutes = (manualHour !== null) ? (manualHour * 60) + 30 : (hours * 60) + minutes;
     
     updateClock(now);
-    updateSky(hours, currentTotalMinutes);
-    updateAudio(hours); // NEW: Separate Audio Function
+    updateSky(hours, totalMinutes);
+    updateAudio(hours); 
     updateBattery();
 }
 
-// 1. CLOCK
 function updateClock(dateObj) {
     if(manualHour !== null) {
         document.getElementById('clockText').innerText = `Test: ${manualHour}:30`;
-        document.getElementById('clockText').style.color = 'orange';
+        document.getElementById('clockText').style.color = '#ffcc00';
     } else {
         document.getElementById('clockText').innerText = dateObj.toLocaleTimeString();
         document.getElementById('clockText').style.color = 'white';
     }
 }
 
-// 2. AUDIO ENGINE (4 STAGES)
+// --- FIXED AUDIO ENGINE ---
 function updateAudio(h) {
-    const audio = document.getElementById('audioPlayer');
     const greeting = document.getElementById('greetingText');
-    let targetSrc = '';
-    let targetGreeting = '';
+    const player = document.getElementById('audioPlayer');
+    
+    let targetFile = "";
+    let targetGreeting = "";
 
-    // LOGIC: Define the 4 blocks
+    // 1. DETERMINE WHICH FILE WE WANT
     if (h >= 5 && h < 12) {
-        // MORNING (5am - 11:59am)
         targetGreeting = 'GOOD MORNING AFRICA';
-        // Use local file 'audio/morning.mp3' OR online fallback
-        targetSrc = 'audio/morning.mp3'; // Birds
+        targetFile = 'audio/morning.mp3';
     } 
     else if (h >= 12 && h < 17) {
-        // AFTERNOON (12pm - 4:59pm)
         targetGreeting = 'GOOD AFTERNOON AFRICA';
-        // Use local file 'audio/afternoon.mp3' OR online fallback
-        targetSrc = 'audio/afternoon.mp3'; // Windy/Nature
+        targetFile = 'audio/afternoon.mp3';
     } 
     else if (h >= 17 && h < 20) {
-        // EVENING (5pm - 7:59pm)
         targetGreeting = 'GOOD EVENING AFRICA';
-        // Use local file 'audio/evening.mp3' OR online fallback
-        targetSrc = 'audio/evening.mp3'; // Soft Crickets
+        targetFile = 'audio/evening.mp3';
     } 
     else {
-        // NIGHT (8pm - 4:59am)
         targetGreeting = 'GOOD NIGHT AFRICA';
-        // Use local file 'audio/night.mp3' OR online fallback
-        targetSrc = 'audio/night.mp3'; // Deep Night
+        targetFile = 'audio/night.mp3';
     }
 
+    // Update Text
     greeting.innerText = targetGreeting;
 
-    // Only switch the song if the URL is different to prevent skipping
-    if (audioAllowed && audioEnabled) {
-        // We check if the current source matches the target. 
-        // Note: audio.src gives full URL, so we check if it includes the filename or unique ID
-        if (audio.src !== targetSrc) {
-            audio.src = targetSrc;
-            audio.play().catch(e => console.log("Audio waiting for interaction"));
+    // 2. ONLY CHANGE AUDIO IF THE FILE NAME CHANGED
+    // This check prevents the "1 second loop" bug
+    if (currentSongName !== targetFile) {
+        console.log("Switching song to:", targetFile);
+        currentSongName = targetFile; // Update memory
+        player.src = targetFile;      // Set the source
+        
+        if (audioAllowed && audioEnabled) {
+            player.play().catch(e => console.log("Waiting for user interaction..."));
         }
     }
 }
 
-// 3. SKY VISUALS (Sun/Moon Logic)
 function updateSky(hours, totalMinutes) {
     const sun = document.getElementById('sun');
     const moon = document.getElementById('moon');
     const container = document.getElementById('skyContainer');
 
-    // Day is 06:00 to 19:00 (7 PM)
     const dayStartMin = 6 * 60; 
     const dayEndMin = 19 * 60;
-    
     let isDayTime = (totalMinutes >= dayStartMin && totalMinutes < dayEndMin);
 
     if (isDayTime) {
-        // DAY VISUALS
         moon.style.display = 'none';
         sun.style.display = 'block';
+        if(hours < 16) container.style.background = 'linear-gradient(to bottom, #87CEEB, #E0F7FA)'; 
+        else container.style.background = 'linear-gradient(to bottom, #ff9966, #ff5e62)'; 
         
-        // Change Background based on Morning vs Afternoon for better effect
-        if(hours < 16) container.style.background = 'linear-gradient(to bottom, #87CEEB, #E0F7FA)'; // Blue Sky
-        else container.style.background = 'linear-gradient(to bottom, #ff9966, #ff5e62)'; // Sunset Orange (Late afternoon)
-
         let percentage = (totalMinutes - dayStartMin) / (dayEndMin - dayStartMin);
         setPosition(sun, percentage);
     } else {
-        // NIGHT VISUALS
         sun.style.display = 'none';
         moon.style.display = 'block';
-        container.style.background = 'linear-gradient(to bottom, #0f2027, #203a43, #2c5364)'; // Deep Space
+        container.style.background = 'linear-gradient(to bottom, #0f2027, #203a43, #2c5364)'; 
 
         let minutesSince7PM = totalMinutes - dayEndMin;
         if (minutesSince7PM < 0) minutesSince7PM += (24 * 60); 
         let percentage = minutesSince7PM / (11 * 60); 
-
         setPosition(moon, percentage);
     }
 }
@@ -197,7 +179,6 @@ function setPosition(element, percentage) {
     element.style.top = `${topPos}%`;
 }
 
-// 4. BATTERY
 function updateBattery(){
     if(navigator.getBattery){
         navigator.getBattery().then(bat => {
@@ -206,14 +187,16 @@ function updateBattery(){
     }
 }
 
-// --- UTILITIES ---
+// UTILITIES
 function allowAudio(){ 
     if(!audioAllowed){
         audioAllowed = true; 
-        document.getElementById('audioPlayer').volume = 0.5;
-        updateSystem(); 
+        // Try to play current loaded song
+        const player = document.getElementById('audioPlayer');
+        if(player.src && audioEnabled) player.play();
     }
 }
+
 function toggleMenu(){ document.getElementById('settingsMenu').classList.toggle('show'); }
 
 document.getElementById('toggleAudio').addEventListener('click', (e) => {
@@ -221,6 +204,7 @@ document.getElementById('toggleAudio').addEventListener('click', (e) => {
     audioEnabled = !audioEnabled;
     const aud = document.getElementById('audioPlayer');
     audioEnabled ? aud.play() : aud.pause();
+    alert(audioEnabled ? "Audio Enabled" : "Audio Muted");
 });
 
 function forceMode(h) {
@@ -229,6 +213,7 @@ function forceMode(h) {
     toggleMenu(); 
 }
 
+// Start
 setInterval(updateSystem, 1000); 
 updateSystem(); 
 </script>
