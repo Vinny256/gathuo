@@ -2,57 +2,142 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>💀💀💀💀</title>
+    <title>Africa Greeting</title>
 
     <style>
         body {
-            background: #0a0a0a;
+            background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
             font-family: 'Poppins', sans-serif;
+            position: relative;
         }
 
-        .container {
-            display: flex;
-            gap: 20px;
+        /* --- AFRICA MAP BACKGROUND --- */
+        .map {
+            position: absolute;
+            width: 70%;
+            opacity: 0.08;
+            filter: drop-shadow(0 0 25px #00eaff);
+            animation: glowMap 5s infinite alternate;
         }
 
+        @keyframes glowMap {
+            0% { filter: drop-shadow(0 0 15px #ff00e0); }
+            50% { filter: drop-shadow(0 0 30px #00ff5e); }
+            100% { filter: drop-shadow(0 0 15px #00eaff); }
+        }
+
+        /* --- MAIN TEXT --- */
         .word {
             font-size: 70px;
             font-weight: 900;
-            animation: glow 2.5s infinite linear, bounce 3s infinite ease-in-out;
-            background: linear-gradient(45deg, #ff00e0, #00eaff, #00ff5e, #ffcc00);
+            z-index: 5;
+            animation: glow 2.8s infinite linear, 
+                       bounce 3s infinite ease-in-out,
+                       gradientMove 5s infinite linear;
+            background: linear-gradient(45deg, #ff00e0, #00eaff, #00ff5e, #ffcc00, #ff0062);
+            background-size: 400% 400%;
             -webkit-background-clip: text;
             color: transparent;
         }
 
+        /* --- DIGITAL CLOCK --- */
+        .clock {
+            font-size: 35px;
+            margin-top: 10px;
+            color: #00eaff;
+            text-shadow: 0 0 12px #00eaff;
+            z-index: 5;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         @keyframes glow {
-            0% {
-                text-shadow: 0 0 10px #ff00e0, 0 0 20px #00eaff, 0 0 40px #00ff5e;
-            }
-            50% {
-                text-shadow: 0 0 20px #ff00e0, 0 0 40px #00eaff, 0 0 60px #ffcc00;
-            }
-            100% {
-                text-shadow: 0 0 10px #00eaff, 0 0 25px #00ff5e, 0 0 45px #ff00e0;
-            }
+            0% { text-shadow: 0 0 15px #ff00e0, 0 0 30px #00eaff; }
+            50% { text-shadow: 0 0 25px #ff00e0, 0 0 45px #00eaff; }
+            100% { text-shadow: 0 0 15px #00eaff, 0 0 35px #00ff5e; }
         }
 
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-25px); }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="word">GOODMORNING</div>
-        <div class="word">AFRICA</div>
-    </div>
+    <!-- AFRICA MAP IMAGE -->
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/86/Africa_(orthographic_projection).svg" class="map">
+
+    <!-- TEXT -->
+    <div class="word" id="greeting">Loading...</div>
+
+    <!-- DIGITAL CLOCK -->
+    <div class="clock" id="clock">00:00:00</div>
+
+    <!-- SOUND PLAYER -->
+    <audio id="sound" loop></audio>
+
+    <script>
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            let greeting = "";
+
+            if (hour >= 5 && hour < 12) {
+                greeting = "GOOD MORNING AFRICA";
+                playSound("morning.mp3");
+            } else if (hour >= 12 && hour < 17) {
+                greeting = "GOOD AFTERNOON AFRICA";
+                playSound("afternoon.mp3");
+            } else if (hour >= 17 && hour < 20) {
+                greeting = "GOOD EVENING AFRICA";
+                playSound("evening.mp3");
+            } else {
+                greeting = "GOOD NIGHT AFRICA";
+                playSound("night.mp3");
+            }
+
+            document.getElementById("greeting").textContent = greeting;
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+
+            document.getElementById("clock").textContent = `${h}:${m}:${s}`;
+        }
+
+        // --- PLAY SOUND DEPENDING ON TIME ---
+        function playSound(file) {
+            const player = document.getElementById("sound");
+
+            // You must place your sound files in same folder:
+            // morning.mp3, afternoon.mp3, evening.mp3, night.mp3
+            player.src = file;
+            player.play().catch(() => {
+                // Browser may block autoplay; will play after click
+            });
+        }
+
+        // Update immediately
+        updateGreeting();
+        updateClock();
+
+        setInterval(updateGreeting, 60000); // Every minute
+        setInterval(updateClock, 1000); // Every second
+    </script>
 
 </body>
 </html>
