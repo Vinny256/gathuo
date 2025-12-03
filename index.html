@@ -117,7 +117,7 @@ function updateAudio(h) {
         // MORNING (5am - 11:59am)
         targetGreeting = 'GOOD MORNING AFRICA';
         // Use local file 'audio/morning.mp3' OR online fallback
-        targetSrc = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_7c6ac0cb52.mp3'; // Birds
+        targetSrc = 'audio/morning.mp3'; // Birds
     } 
     else if (h >= 12 && h < 17) {
         // AFTERNOON (12pm - 4:59pm)
@@ -129,13 +129,13 @@ function updateAudio(h) {
         // EVENING (5pm - 7:59pm)
         targetGreeting = 'GOOD EVENING AFRICA';
         // Use local file 'audio/evening.mp3' OR online fallback
-        targetSrc = 'https://cdn.pixabay.com/download/audio/2022/02/07/audio_86e0d7fcb1.mp3'; // Soft Crickets
+        targetSrc = 'audio/evening.mp3'; // Soft Crickets
     } 
     else {
         // NIGHT (8pm - 4:59am)
         targetGreeting = 'GOOD NIGHT AFRICA';
         // Use local file 'audio/night.mp3' OR online fallback
-        targetSrc = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_1738e9f9d9.mp3'; // Deep Night
+        targetSrc = 'audio/night.mp3'; // Deep Night
     }
 
     greeting.innerText = targetGreeting;
