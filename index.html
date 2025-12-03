@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Africa Real-Time Sky</title>
+<title>Africa Real-Time 4-Stage Audio</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
@@ -12,22 +12,20 @@
     .container { width:100%; max-width:700px; height: 500px; background:#222; border-radius:20px; padding:20px; position:relative; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
 
     /* CELESTIAL BODIES */
-    .celestial-body { position:absolute; border-radius:50%; display:none; /* Hidden by default, JS turns them on */ pointer-events: none; }
+    .celestial-body { position:absolute; border-radius:50%; display:none; pointer-events: none; }
 
     .sun { width:80px; height:80px; background: radial-gradient(circle, #ffd700 20%, #ff8c00 100%); box-shadow: 0 0 40px #ff8c00; z-index:1; }
     
     .moon { width:60px; height:60px; background: radial-gradient(circle, #ddd 20%, #777 100%); box-shadow: 0 0 20px #fff; z-index:1; 
-            /* The user requested rotation for the moon */
-            animation: spinMoon 20s linear infinite; 
-    }
+            animation: spinMoon 20s linear infinite; }
 
     @keyframes spinMoon { 0%{transform: rotate(0deg);} 100%{transform: rotate(360deg);} }
 
     /* UI ELEMENTS */
     .settings-btn { position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.5); padding:10px 15px; border-radius:10px; cursor:pointer; font-size:14px; z-index:10; color:white; }
-    .settings-menu { position:absolute; top:50px; right:15px; width:170px; padding:15px; background:rgba(0,0,0,0.8); border-radius:10px; display:none; z-index:10; }
+    .settings-menu { position:absolute; top:50px; right:15px; width:200px; padding:15px; background:rgba(0,0,0,0.8); border-radius:10px; display:none; z-index:10; }
     .settings-menu.show { display:block; }
-    .settings-menu p { margin:10px 0; cursor:pointer; border-bottom:1px solid #555; padding-bottom:5px; }
+    .settings-menu p { margin:10px 0; cursor:pointer; border-bottom:1px solid #555; padding-bottom:5px; font-size: 13px; }
 
     .africa-container { position: absolute; bottom: 0; left:0; width:100%; height: 60%; display:flex; align-items:flex-end; justify-content:center; z-index: 2; opacity: 0.4; }
     .africa-img { max-height: 100%; max-width: 100%; }
@@ -53,8 +51,10 @@
     <div class="settings-btn" onclick="toggleMenu()"><i class="fas fa-cog"></i> Settings</div>
     <div class="settings-menu" id="settingsMenu">
         <p id="toggleAudio"><i class="fas fa-volume-up"></i> Mute/Unmute</p>
-        <p onclick="forceMode('day')"><i class="fas fa-sun"></i> Test Day Mode</p>
-        <p onclick="forceMode('night')"><i class="fas fa-moon"></i> Test Night Mode</p>
+        <p onclick="forceMode(9)"><i class="fas fa-sun"></i> Test Morning (9 AM)</p>
+        <p onclick="forceMode(14)"><i class="fas fa-cloud-sun"></i> Test Afternoon (2 PM)</p>
+        <p onclick="forceMode(18)"><i class="fas fa-cloud-moon"></i> Test Evening (6 PM)</p>
+        <p onclick="forceMode(22)"><i class="fas fa-moon"></i> Test Night (10 PM)</p>
         <p onclick="forceMode('auto')"><i class="fas fa-clock"></i> Auto Mode</p>
     </div>
 
@@ -75,114 +75,129 @@
 // --- CONFIGURATION ---
 let audioAllowed = false;
 let audioEnabled = true;
-let manualOverride = null; // 'day', 'night', or null (auto)
+let manualHour = null; // Used for testing specific times
 
 // --- MAIN ENGINE ---
 function updateSystem() {
     const now = new Date();
-    const hours = now.getHours();
+    // Use manualHour if set (for testing), otherwise real time
+    const hours = (manualHour !== null) ? manualHour : now.getHours();
     const minutes = now.getMinutes();
-    const totalMinutes = (hours * 60) + minutes;
+    
+    // We calculate "Total Minutes" to animate smooth movement
+    // If manualHour is set, we assume minutes are 30 (half past)
+    const currentTotalMinutes = (manualHour !== null) ? (manualHour * 60) + 30 : (hours * 60) + minutes;
     
     updateClock(now);
-    updateSky(hours, totalMinutes);
+    updateSky(hours, currentTotalMinutes);
+    updateAudio(hours); // NEW: Separate Audio Function
     updateBattery();
 }
 
 // 1. CLOCK
 function updateClock(dateObj) {
-    document.getElementById('clockText').innerText = dateObj.toLocaleTimeString();
+    if(manualHour !== null) {
+        document.getElementById('clockText').innerText = `Test: ${manualHour}:30`;
+        document.getElementById('clockText').style.color = 'orange';
+    } else {
+        document.getElementById('clockText').innerText = dateObj.toLocaleTimeString();
+        document.getElementById('clockText').style.color = 'white';
+    }
 }
 
-// 2. SKY ENGINE (The Logic you asked for)
-function updateSky(hours, totalMinutes) {
-    const sun = document.getElementById('sun');
-    const moon = document.getElementById('moon');
-    const container = document.getElementById('skyContainer');
-    const greeting = document.getElementById('greetingText');
+// 2. AUDIO ENGINE (4 STAGES)
+function updateAudio(h) {
     const audio = document.getElementById('audioPlayer');
+    const greeting = document.getElementById('greetingText');
+    let targetSrc = '';
+    let targetGreeting = '';
 
-    // Define Day duration: 06:00 (360min) to 19:00 (1140min)
-    const dayStartMin = 6 * 60; 
-    const dayEndMin = 19 * 60;
-    
-    let isDayTime = (totalMinutes >= dayStartMin && totalMinutes < dayEndMin);
-    
-    // Check for manual overrides from settings
-    if(manualOverride === 'day') isDayTime = true;
-    if(manualOverride === 'night') isDayTime = false;
+    // LOGIC: Define the 4 blocks
+    if (h >= 5 && h < 12) {
+        // MORNING (5am - 11:59am)
+        targetGreeting = 'GOOD MORNING AFRICA';
+        // Use local file 'audio/morning.mp3' OR online fallback
+        targetSrc = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_7c6ac0cb52.mp3'; // Birds
+    } 
+    else if (h >= 12 && h < 17) {
+        // AFTERNOON (12pm - 4:59pm)
+        targetGreeting = 'GOOD AFTERNOON AFRICA';
+        // Use local file 'audio/afternoon.mp3' OR online fallback
+        targetSrc = 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_0788554277.mp3'; // Windy/Nature
+    } 
+    else if (h >= 17 && h < 20) {
+        // EVENING (5pm - 7:59pm)
+        targetGreeting = 'GOOD EVENING AFRICA';
+        // Use local file 'audio/evening.mp3' OR online fallback
+        targetSrc = 'https://cdn.pixabay.com/download/audio/2022/02/07/audio_86e0d7fcb1.mp3'; // Soft Crickets
+    } 
+    else {
+        // NIGHT (8pm - 4:59am)
+        targetGreeting = 'GOOD NIGHT AFRICA';
+        // Use local file 'audio/night.mp3' OR online fallback
+        targetSrc = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_1738e9f9d9.mp3'; // Deep Night
+    }
 
-    if (isDayTime) {
-        // --- DAY MODE ---
-        moon.style.display = 'none';
-        sun.style.display = 'block';
-        container.style.background = 'linear-gradient(to bottom, #87CEEB, #E0F7FA)'; // Sky Blue
-        document.body.style.background = '#87CEEB';
-        
-        // Calculate Sun Position (0% to 100% across screen)
-        // If override is on, simulate noon (50%)
-        let percentage = manualOverride ? 0.5 : (totalMinutes - dayStartMin) / (dayEndMin - dayStartMin);
-        
-        setPosition(sun, percentage);
-        
-        // Text & Audio
-        if(hours < 12) greeting.innerText = "GOOD MORNING AFRICA";
-        else greeting.innerText = "GOOD AFTERNOON AFRICA";
-        
-        if(audio.src.indexOf('morning') === -1 && audioAllowed) {
-            audio.src = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_7c6ac0cb52.mp3'; // Birds
-            if(audioEnabled) audio.play().catch(e=>{});
-        }
+    greeting.innerText = targetGreeting;
 
-    } else {
-        // --- NIGHT MODE (After 7 PM) ---
-        sun.style.display = 'none';
-        moon.style.display = 'block';
-        container.style.background = 'linear-gradient(to bottom, #0f2027, #203a43, #2c5364)'; // Deep Space
-        document.body.style.background = '#111';
-
-        // Calculate Moon Position
-        // Night is from 19:00 (start) to 06:00 (end next day)
-        // Total night minutes = 11 hours * 60 = 660 mins
-        let minutesSince7PM = totalMinutes - dayEndMin;
-        if (minutesSince7PM < 0) minutesSince7PM += (24 * 60); // Handle post-midnight
-        
-        // If override is on, simulate midnight (50%)
-        let percentage = manualOverride ? 0.5 : minutesSince7PM / (11 * 60); 
-
-        setPosition(moon, percentage);
-
-        // Text & Audio
-        if(hours >= 19 && hours < 24) greeting.innerText = "GOOD EVENING AFRICA";
-        else greeting.innerText = "GOOD NIGHT AFRICA";
-
-        if(audio.src.indexOf('night') === -1 && audioAllowed) {
-            audio.src = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_1738e9f9d9.mp3'; // Crickets
-            if(audioEnabled) audio.play().catch(e=>{});
+    // Only switch the song if the URL is different to prevent skipping
+    if (audioAllowed && audioEnabled) {
+        // We check if the current source matches the target. 
+        // Note: audio.src gives full URL, so we check if it includes the filename or unique ID
+        if (audio.src !== targetSrc) {
+            audio.src = targetSrc;
+            audio.play().catch(e => console.log("Audio waiting for interaction"));
         }
     }
 }
 
-// Helper to calculate X/Y arc
-function setPosition(element, percentage) {
-    // Left: 0% to 100%
-    // Top: Uses Sin wave to make it rise (10%) and set (80%)
-    // Math.sin(0) = 0, Math.sin(PI/2) = 1, Math.sin(PI) = 0
+// 3. SKY VISUALS (Sun/Moon Logic)
+function updateSky(hours, totalMinutes) {
+    const sun = document.getElementById('sun');
+    const moon = document.getElementById('moon');
+    const container = document.getElementById('skyContainer');
+
+    // Day is 06:00 to 19:00 (7 PM)
+    const dayStartMin = 6 * 60; 
+    const dayEndMin = 19 * 60;
     
-    // Clamp percentage between 0 and 1
+    let isDayTime = (totalMinutes >= dayStartMin && totalMinutes < dayEndMin);
+
+    if (isDayTime) {
+        // DAY VISUALS
+        moon.style.display = 'none';
+        sun.style.display = 'block';
+        
+        // Change Background based on Morning vs Afternoon for better effect
+        if(hours < 16) container.style.background = 'linear-gradient(to bottom, #87CEEB, #E0F7FA)'; // Blue Sky
+        else container.style.background = 'linear-gradient(to bottom, #ff9966, #ff5e62)'; // Sunset Orange (Late afternoon)
+
+        let percentage = (totalMinutes - dayStartMin) / (dayEndMin - dayStartMin);
+        setPosition(sun, percentage);
+    } else {
+        // NIGHT VISUALS
+        sun.style.display = 'none';
+        moon.style.display = 'block';
+        container.style.background = 'linear-gradient(to bottom, #0f2027, #203a43, #2c5364)'; // Deep Space
+
+        let minutesSince7PM = totalMinutes - dayEndMin;
+        if (minutesSince7PM < 0) minutesSince7PM += (24 * 60); 
+        let percentage = minutesSince7PM / (11 * 60); 
+
+        setPosition(moon, percentage);
+    }
+}
+
+function setPosition(element, percentage) {
     if(percentage < 0) percentage = 0;
     if(percentage > 1) percentage = 1;
-
     const leftPos = percentage * 100;
-    // The arc: Starts at 80% down, goes up to 10% from top, back to 80% down
-    // We modify the PI curve slightly to keep it higher in the sky
     const topPos = 80 - (Math.sin(percentage * Math.PI) * 70); 
-
-    element.style.left = `calc(${leftPos}% - 40px)`; // -40px to center element
+    element.style.left = `calc(${leftPos}% - 40px)`;
     element.style.top = `${topPos}%`;
 }
 
-// 3. BATTERY
+// 4. BATTERY
 function updateBattery(){
     if(navigator.getBattery){
         navigator.getBattery().then(bat => {
@@ -196,32 +211,26 @@ function allowAudio(){
     if(!audioAllowed){
         audioAllowed = true; 
         document.getElementById('audioPlayer').volume = 0.5;
-        updateSystem(); // trigger play
+        updateSystem(); 
     }
 }
-
-function toggleMenu(){ 
-    document.getElementById('settingsMenu').classList.toggle('show'); 
-}
+function toggleMenu(){ document.getElementById('settingsMenu').classList.toggle('show'); }
 
 document.getElementById('toggleAudio').addEventListener('click', (e) => {
     e.stopPropagation();
     audioEnabled = !audioEnabled;
     const aud = document.getElementById('audioPlayer');
     audioEnabled ? aud.play() : aud.pause();
-    alert(audioEnabled ? "Audio On" : "Audio Off");
 });
 
-function forceMode(mode) {
-    manualOverride = (mode === 'auto') ? null : mode;
+function forceMode(h) {
+    manualHour = (h === 'auto') ? null : h;
     updateSystem();
-    toggleMenu(); // Close menu
+    toggleMenu(); 
 }
 
-// Run loop
-setInterval(updateSystem, 1000); // Check every second
-updateSystem(); // Run immediately
-
+setInterval(updateSystem, 1000); 
+updateSystem(); 
 </script>
 </body>
 </html>
